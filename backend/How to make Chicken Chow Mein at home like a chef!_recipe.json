@@ -1,0 +1,171 @@
+{
+  "title": "Chicken Chow Mein",
+  "ingredients": {
+    "main": [
+      "1 lb/450g chicken breast",
+      "1 tbsp light soy sauce",
+      "2 tbsp water",
+      "1/2 tbsp ginger"
+    ],
+    "spices_and_seasonings": [
+      "salt",
+      "pepper"
+    ],
+    "optional": [
+      "garnish items"
+    ]
+  },
+  "kitchen_tools_and_dishes": [
+    "wok",
+    "chopsticks/tongs"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Clear, imperative instruction",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 2,
+      "instruction": "Mix chicken strips with 1 tbsp light soy sauce, 2 tbsp water and set aside for 10 minutes",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 3,
+      "instruction": "Cut 1/2 of a medium sized cabbage and remove the core",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 4,
+      "instruction": "Thinly slice the cabbage",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 5,
+      "instruction": "Cut 2 carrots into matchsticks",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 6,
+      "instruction": "Finely chop the white part",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 7,
+      "instruction": "Slice and mince 1/2 tbsp ginger",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 8,
+      "instruction": "Sauce: 1 tbsp light soy sauce, 1.5 tbsp dark soy sauce, 2 tbsp oyster sauce, 1 tbsp water, 1 tsp sugar",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 9,
+      "instruction": "Mix chicken strips with 2 tbsp cornstarch",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 10,
+      "instruction": "Cook noodles 2 minutes less than the package instructions to avoid overcooking",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 11,
+      "instruction": "Drain, wash with cold water and coat with 1 tbsp oil",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 12,
+      "instruction": "Heat oil in a wok and scramble 2 eggs",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 13,
+      "instruction": "Add some more oil and stir fry chicken on high heat",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 14,
+      "instruction": "Stir fry ginger, garlic and scallion whites for 1 minute",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 15,
+      "instruction": "Add carrots and stir fry until the vegetables are lightly charred",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 16,
+      "instruction": "Set aside when done",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 17,
+      "instruction": "Heat oil in a wok and scramble 2 eggs",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 18,
+      "instruction": "Add some more oil and stir fry chicken on high heat",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 19,
+      "instruction": "Stir fry ginger, garlic and scallion whites for 1 minute",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 20,
+      "instruction": "Add cabbage and stir fry until the vegetables are lightly charred",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 21,
+      "instruction": "Set aside when done",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 22,
+      "instruction": "Stir fry noodles for a couple of minutes",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 23,
+      "instruction": "Add back the stir fried chicken and vegetables",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 24,
+      "instruction": "Pour in the sauce and mix well",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 25,
+      "instruction": "Stir fry for a couple of minutes",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 26,
+      "instruction": "Taste and adjust salt and pepper as per preference",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 27,
+      "instruction": "Add black pepper and MSG (optional for authentic flavor)",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 28,
+      "instruction": "Add a few drops of sesame oil, eggs, scallion green and mix",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 29,
+      "instruction": "Stir fry for 2-3 minutes",
+      "estimated_time": "3 minutes"
+    }
+  ],
+  "source_video_id": "YOiOXW_ibVw",
+  "source_title": "How to make Chicken Chow Mein at home like a chef!"
+}

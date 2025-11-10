@@ -1,0 +1,85 @@
+{
+  "title": "Pasta Dough Recipe",
+  "ingredients": {
+    "main": [
+      "2 cups (240 grams) all-purpose flour",
+      "1/2 teaspoon salt"
+    ],
+    "spices_and_seasonings": [
+      "Optional: Black pepper"
+    ],
+    "optional": [
+      "1 teaspoon olive oil",
+      "1/2 teaspoon salt"
+    ],
+    "other_categories": [
+      "Water"
+    ]
+  },
+  "kitchen_tools_and_dishes": [
+    "Measuring cup",
+    "Mixing bowl",
+    "Wooden spoon or spatula",
+    "Large pot",
+    "Colander"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Measure the flour.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 2,
+      "instruction": "Add salt to the flour.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 3,
+      "instruction": "Gradually add water to the flour.",
+      "estimated_time": "3-5 minutes"
+    },
+    {
+      "step_number": 4,
+      "instruction": "Mix until a dough forms.",
+      "estimated_time": "5-7 minutes"
+    },
+    {
+      "step_number": 5,
+      "instruction": "Knead the dough.",
+      "estimated_time": "8-10 minutes"
+    },
+    {
+      "step_number": 6,
+      "instruction": "Rest the dough.",
+      "estimated_time": "30 minutes"
+    },
+    {
+      "step_number": 7,
+      "instruction": "Roll out the dough.",
+      "estimated_time": "5-7 minutes"
+    },
+    {
+      "step_number": 8,
+      "instruction": "Cut the dough into squares.",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 9,
+      "instruction": "Flatten the dough.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 10,
+      "instruction": "Fold the dough in thirds.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 11,
+      "instruction": "Roll out the dough.",
+      "estimated_time": "5-7 minutes"
+    }
+  ],
+  "notes": "For a more rustic pasta, you can leave the edges a little loose.",
+  "recipe_name": "Pasta Dough"
+}

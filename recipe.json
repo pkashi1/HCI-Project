@@ -1,0 +1,176 @@
+{
+  "recipe_name": "Hyderabadi Chicken Biryani",
+  "description": "A traditional Hyderabadi layered rice and chicken dish made with aromatic spices, herbs, and fried onions, slow-cooked to perfection using the dum method.",
+  "servings": 6,
+  "total_time": "6 hours (including marination and resting)",
+  "ingredients": {
+    "main": [
+      "1 kg chicken thighs (skin off, preferably on the bone)",
+      "3–4 large onions (thinly sliced)",
+      "3 cups aged basmati rice",
+      "1 cup plain yogurt",
+      "1 lemon (juiced)",
+      "2–3 green chilies (sliced, seeds in)",
+      "1/2 cup fresh mint leaves (chopped)",
+      "1/2 cup fresh coriander leaves (chopped)",
+      "2 cups vegetable oil (for frying)",
+      "1/4 cup warm milk",
+      "A pinch of saffron (or 1/4 tsp turmeric as substitute)"
+    ],
+    "spices": [
+      "2 tsp Kashmiri chili powder (or regular chili powder)",
+      "1 tsp turmeric powder",
+      "2 tsp garam masala",
+      "1 tbsp ginger paste",
+      "1 tbsp garlic paste",
+      "1 cinnamon stick (split between rice and marinade)",
+      "8 green cardamom pods (lightly crushed)",
+      "1 tsp cumin seeds (for rice and marinade)",
+      "4 cloves (2 for rice, 2 for marinade)",
+      "Salt (to taste)"
+    ],
+    "for_sealing_dough": [
+      "1 cup all-purpose flour",
+      "Water (as needed to make a firm dough)",
+      "Extra flour for dusting"
+    ]
+  },
+  "kitchen_tools_and_dishes": [
+    "Large deep pot with lid (for biryani cooking)",
+    "Frying pan or wok (for onions)",
+    "Large bowl (for marinating chicken)",
+    "Large pot (for boiling rice)",
+    "Small bowl (for saffron milk)",
+    "Tray or plate lined with paper towels (for fried onions)",
+    "Mandolin or sharp knife (for slicing onions)",
+    "Slotted spoon (for removing onions from oil)",
+    "Mixing spoon or spatula",
+    "Rolling pin (for sealing dough)",
+    "Measuring cups and spoons",
+    "Serving platter or large tray (for plating biryani)"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Thinly slice a large quantity of onions using a knife or mandolin.",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 2,
+      "instruction": "Heat 2 cm of vegetable oil in a pan over medium-low heat.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 3,
+      "instruction": "Fry the onions in batches until golden and crisp, stirring constantly to avoid burning.",
+      "estimated_time": "15 minutes per batch"
+    },
+    {
+      "step_number": 4,
+      "instruction": "Remove onions just before fully browned and place on paper towels to cool.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 5,
+      "instruction": "Repeat frying with remaining onions.",
+      "estimated_time": "15 minutes"
+    },
+    {
+      "step_number": 6,
+      "instruction": "Combine chicken thighs with yogurt, chili powder, turmeric, garam masala, ginger paste, garlic, lemon juice, sliced green chilies, cinnamon stick, crushed cardamom pods, cumin seeds, cloves, and salt.",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 7,
+      "instruction": "Add chopped mint, coriander, and one-third of the fried onions to the chicken mixture and mix well.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 8,
+      "instruction": "Cover and marinate chicken in the fridge for at least 4 hours (up to 24 hours).",
+      "estimated_time": "4 hours"
+    },
+    {
+      "step_number": 9,
+      "instruction": "Wash and rinse aged basmati rice twice, then soak it in water for 35–40 minutes.",
+      "estimated_time": "40 minutes"
+    },
+    {
+      "step_number": 10,
+      "instruction": "Warm milk and steep saffron strands in it to create saffron milk (or use turmeric as a substitute).",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 11,
+      "instruction": "Prepare sealing dough by mixing flour and water into a workable dough and rolling it into a long log; let it rest.",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 12,
+      "instruction": "Boil water in a large pot, add salt, cardamom, green chili, cinnamon stick, cloves, and cumin seeds.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 13,
+      "instruction": "Drain soaked rice and add it to the boiling water; cook until just al dente (4–5 minutes).",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 14,
+      "instruction": "Drain the rice immediately to prevent overcooking.",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 15,
+      "instruction": "Heat marinated chicken on high heat for 4–5 minutes to start cooking; stir frequently.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 16,
+      "instruction": "Remove half of the chicken and set aside for layering.",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 17,
+      "instruction": "Layer the remaining chicken evenly in the pot, followed by a layer of cooked rice.",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 18,
+      "instruction": "Add the reserved chicken pieces, remaining sauce, fried onions, coriander, and mint on top.",
+      "estimated_time": "3 minutes"
+    },
+    {
+      "step_number": 19,
+      "instruction": "Top with the final layer of rice, more onions, herbs, and pour saffron milk evenly over it.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 20,
+      "instruction": "Seal the pot tightly with the prepared dough or a clean tea towel under the lid.",
+      "estimated_time": "5 minutes"
+    },
+    {
+      "step_number": 21,
+      "instruction": "Cook the sealed pot on high heat for 10 minutes, then reduce to low heat and cook for 30 minutes.",
+      "estimated_time": "40 minutes"
+    },
+    {
+      "step_number": 22,
+      "instruction": "Turn off the heat and let the biryani rest for 20 minutes before opening.",
+      "estimated_time": "20 minutes"
+    },
+    {
+      "step_number": 23,
+      "instruction": "Break the dough seal carefully, mix lightly, and serve the biryani layered with herbs and onions.",
+      "estimated_time": "5 minutes"
+    }
+  ],
+  "serving_suggestion": "Serve hot on a large platter, garnished with fresh coriander, mint, and crispy onions. Pair with raita or salad.",
+  "notes": [
+    "Use aged basmati rice for distinct, non-sticky grains.",
+    "Marinate chicken for at least 4 hours for best flavor.",
+    "Do not overcook rice before layering; it will finish cooking during the dum process.",
+    "If saffron is unavailable, use turmeric for color and aroma."
+  ]
+}

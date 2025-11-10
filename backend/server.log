@@ -1,0 +1,19 @@
+INFO:     Started server process [85790]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+Session error: table sessions has no column named is_paused
+Traceback (most recent call last):
+  File "/Users/parimalkashireddy/Desktop/Human_computer_Interaction/Project/backend/app.py", line 561, in start_session
+    session = manager.create_session(request.recipe)
+  File "/Users/parimalkashireddy/Desktop/Human_computer_Interaction/Project/backend/state.py", line 483, in create_session
+    self._save_session(session)
+  File "/Users/parimalkashireddy/Desktop/Human_computer_Interaction/Project/backend/state.py", line 507, in _save_session
+    cursor.execute("""
+sqlite3.OperationalError: table sessions has no column named is_paused
+
+INFO:     127.0.0.1:57485 - "POST /session/start HTTP/1.1" 500 Internal Server Error
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [85790]
