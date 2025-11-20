@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cooking Assistant — Voice Control</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Cooking Assistant</h1>
+
+    <section id="setup">
+      <label>
+        YouTube video URL
+        <input id="youtubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." />
+      </label>
+      <div class="yt-actions">
+        <button id="ingestBtn">Ingest from YouTube</button>
+        <button id="extractBtn" class="secondary">Extract Recipe</button>
+      </div>
+
+      <label class="file-label">
+        Upload recipe JSON
+        <input id="recipeFile" type="file" accept="application/json" />
+      </label>
+      <div class="or">— OR —</div>
+      <label>
+        Transcript / Recipe JSON
+        <textarea id="recipeText" placeholder="After ingest, the transcript will appear here. You can edit transcript or paste recipe JSON here."></textarea>
+      </label>
+
+      <div class="actions">
+        <button id="startBtn">Start Session</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+
+      <div id="status" class="status">Idle</div>
+    </section>
+
+    <section id="session" class="hidden">
+      <div class="session-header">
+        <div>
+          <strong id="recipeTitle">Recipe</strong>
+          <div id="meta" class="meta"></div>
+        </div>
+        <div class="voice-controls">
+          <button id="voiceToggle">🎤 Start Listening</button>
+          <button id="muteTts" class="secondary">🔇 Mute TTS</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-number">Step <span id="currentStep">-</span> / <span id="totalSteps">-</span></div>
+        <div id="instruction" class="instruction">No step loaded</div>
+      </div>
+
+      <div class="controls">
+        <button id="prevBtn">◀ Previous</button>
+        <button id="repeatBtn">🔁 Repeat</button>
+        <button id="nextBtn">Next ▶</button>
+      </div>
+
+      <div class="ask">
+        <input id="askInput" placeholder="Ask a question about the recipe" />
+        <button id="askBtn">Ask</button>
+      </div>
+
+      <div id="log" class="log"></div>
+    </section>
+
+    <footer>
+      <small>Backend: <code id="backendUrl">http://localhost:8000</code></small>
+    </footer>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>

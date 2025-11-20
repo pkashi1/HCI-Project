@@ -1,0 +1,83 @@
+{
+  "title": "Pasta Dough Recipe",
+  "ingredients": {
+    "main": [
+      "2 cups flour"
+    ],
+    "spices_and_seasonings": [
+      "salt"
+    ],
+    "optional": [
+      "olive oil"
+    ],
+    "other_categories": [
+      "water"
+    ]
+  },
+  "kitchen_tools_and_dishes": [
+    "measuring cup",
+    "bowl",
+    "wooden spoon",
+    "rolling pin",
+    "table",
+    "counter"
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "instruction": "Measure out 2 cups of flour.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 2,
+      "instruction": "Add salt to the flour.",
+      "estimated_time": "0.5 minutes"
+    },
+    {
+      "step_number": 3,
+      "instruction": "Mix the flour and salt together.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 4,
+      "instruction": "Gradually add water to the flour mixture.",
+      "estimated_time": "3-5 minutes"
+    },
+    {
+      "step_number": 5,
+      "instruction": "Knead the dough until it forms a smooth ball.",
+      "estimated_time": "8-10 minutes"
+    },
+    {
+      "step_number": 6,
+      "instruction": "Wrap the dough in plastic wrap.",
+      "estimated_time": "10 minutes"
+    },
+    {
+      "step_number": 7,
+      "instruction": "Let the dough rest for 30 minutes.",
+      "estimated_time": "30 minutes"
+    },
+    {
+      "step_number": 8,
+      "instruction": "Roll out the dough to a thin sheet.",
+      "estimated_time": "5-7 minutes"
+    },
+    {
+      "step_number": 9,
+      "instruction": "Cut the dough into four equal pieces.",
+      "estimated_time": "2 minutes"
+    },
+    {
+      "step_number": 10,
+      "instruction": "Flatten each piece and roll it into a ball.",
+      "estimated_time": "1 minute"
+    },
+    {
+      "step_number": 11,
+      "instruction": "Cook the pasta for 10-12 minutes.",
+      "estimated_time": "10-12 minutes"
+    }
+  ],
+  "notes": "For a more delicate pasta, you can add a little bit of olive oil to the dough."
+}
