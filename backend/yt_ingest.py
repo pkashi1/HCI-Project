@@ -17,7 +17,7 @@ def extract_video_id(url_or_id: str) -> str:
     - https://youtu.be/VIDEO_ID
     - VIDEO_ID (11 characters)
     """
-    match = re.search(r'(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})', url_or_id)
+    match = re.search(r'(?:v=|youtu\.be/|shorts/)([a-zA-Z0-9_-]{11})', url_or_id)
     return match.group(1) if match else url_or_id
 
 
