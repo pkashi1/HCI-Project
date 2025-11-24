@@ -28,6 +28,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const backendUrlEl = document.getElementById('backendUrl');
   backendUrlEl.textContent = BASE_URL;
 
+  // Small UI helpers
+  function log(...args) {
+    try {
+      const line = document.createElement('div');
+      line.textContent = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+      logEl.prepend(line);
+    } catch (e) {
+      // ignore
+      /* console.log(...args) */
+    }
+  }
+
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  function speak(text) {
+    if (ttsMuted) return;
+    if (!('speechSynthesis' in window)) {
+      log('TTS not supported, assistant:', text);
+      return;
+    }
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      log('TTS error:', e.message || e);
+    }
+  }
+
   const nextBtn = document.getElementById('nextBtn');
   const prevBtn = document.getElementById('prevBtn');
   const repeatBtn = document.getElementById('repeatBtn');
@@ -35,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const askBtn = document.getElementById('askBtn');
   const voiceToggle = document.getElementById('voiceToggle');
   const muteTts = document.getElementById('muteTts');
+  const openTabBtn = document.getElementById('openTabBtn');
 
   let sessionId = null;
   let totalSteps = 0;
@@ -68,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
       voiceToggle.textContent = '🎤 Start Listening';
     });
   }
-  startBtn.addEventListener('click', async () => {
+  startBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+  //  startBtn.addEventListener('click', async () => {
     // If we already have an extracted recipe, use it
     if (extractedRecipe) {
       await startSessionWithRecipe(extractedRecipe);
@@ -102,7 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Ingest from YouTube: call /ingest and populate transcript area
-  ingestBtn.addEventListener('click', async () => {
+  ingestBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
     const url = youtubeUrl.value.trim();
     if (!url) {
       setStatus('Enter a YouTube URL');
@@ -135,7 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Extract recipe from transcript: call /extract and start session
-  extractBtn.addEventListener('click', async () => {
+  extractBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
     const transcript = recipeText.value.trim();
     if (!transcript) {
       setStatus('No transcript available to extract from');
@@ -167,6 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper: start session given a recipe object
   async function startSessionWithRecipe(recipe) {
+    // Validate recipe object before sending to backend
+    const valid = validateRecipe(recipe);
+    if (!valid) {
+      setStatus('Recipe validation failed — see log');
+      return;
+    }
     setStatus('Starting session...');
     try {
       const resp = await fetch(`${BASE_URL}/session/start`, {
@@ -186,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
       recipeTitleEl.textContent = data.recipe_title || (recipe.title || 'Recipe');
       totalStepsEl.textContent = String(totalSteps);
       metaEl.textContent = `Session: ${sessionId}`;
+  // show "open in new tab" control
+  if (openTabBtn) openTabBtn.classList.remove('hidden');
       setStatus('Session started');
       document.getElementById('setup').classList.add('hidden');
       sessionSection.classList.remove('hidden');
@@ -195,6 +239,94 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Could not start session');
       log('Start exception:', e.message || e);
     }
+  }
+
+  // Open session UI in a new tab/window
+  if (openTabBtn) {
+    openTabBtn.addEventListener('click', () => {
+      if (!sessionId) return;
+      const url = new URL(window.location.href);
+      url.searchParams.set('session', sessionId);
+      window.open(url.toString(), '_blank');
+    });
+  }
+
+  // If page loaded with ?session=<id>, try to load that session state and show session UI
+  (async function loadSessionFromUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sid = params.get('session');
+      if (!sid) return;
+      // fetch session state from backend
+      setStatus('Loading session...');
+      const resp = await fetch(`${BASE_URL}/session/${encodeURIComponent(sid)}`);
+      if (!resp.ok) {
+        setStatus('Could not load session');
+        log('Load session failed:', await resp.text());
+        return;
+      }
+      const data = await resp.json();
+      // populate UI
+      sessionId = sid;
+      totalSteps = data.total_steps || 0;
+      currentStep = data.current_step || 0;
+      recipeTitleEl.textContent = data.recipe && (data.recipe.title || data.recipe.name) || data.recipe_title || 'Recipe';
+      totalStepsEl.textContent = String(totalSteps);
+      currentStepEl.textContent = String(currentStep);
+      // current step instruction
+      const stepData = data.current_step_data || (data.recipe && data.recipe.steps && data.recipe.steps[currentStep-1]);
+      if (stepData && stepData.instruction) {
+        instructionEl.textContent = stepData.instruction;
+      }
+      // show controls
+      document.getElementById('setup').classList.add('hidden');
+      sessionSection.classList.remove('hidden');
+      if (openTabBtn) openTabBtn.classList.remove('hidden');
+      setStatus('Session loaded');
+    } catch (e) {
+      log('Error loading session from URL:', e.message || e);
+    }
+  })();
+
+  // Client-side recipe validation
+  function validateRecipe(recipe) {
+    const errors = [];
+    if (!recipe || typeof recipe !== 'object') {
+      errors.push('Recipe must be a JSON object');
+    } else {
+      // Title check (optional)
+      if (!recipe.title && !recipe.name) {
+        errors.push('Recipe should include a title ("title" or "name")');
+      }
+
+      // Steps check
+      if (!Array.isArray(recipe.steps)) {
+        errors.push('Recipe must include a "steps" array');
+      } else if (recipe.steps.length === 0) {
+        errors.push('Recipe "steps" must not be empty');
+      } else {
+        recipe.steps.forEach((s, i) => {
+          if (!s || typeof s !== 'object') {
+            errors.push(`Step at index ${i} is not an object`);
+            return;
+          }
+          if (!s.instruction || typeof s.instruction !== 'string' || s.instruction.trim() === '') {
+            errors.push(`Step ${s.step_number || i+1} missing a non-empty "instruction" string`);
+          }
+          // optional: check step_number is numeric
+          if (s.step_number != null && isNaN(Number(s.step_number))) {
+            errors.push(`Step ${i+1} has invalid step_number`);
+          }
+        });
+      }
+    }
+
+    if (errors.length) {
+      log('Validation errors:');
+      errors.forEach(e => log('• ' + e));
+      return false;
+    }
+    return true;
   }
 
 

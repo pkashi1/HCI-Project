@@ -16,8 +16,8 @@
         <input id="youtubeUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." />
       </label>
       <div class="yt-actions">
-        <button id="ingestBtn">Ingest from YouTube</button>
-        <button id="extractBtn" class="secondary">Extract Recipe</button>
+        <button type="button" id="ingestBtn">Ingest from YouTube</button>
+        <button type="button" id="extractBtn" class="secondary">Extract Recipe</button>
       </div>
 
       <label class="file-label">
@@ -31,7 +31,7 @@
       </label>
 
       <div class="actions">
-        <button id="startBtn">Start Session</button>
+        <button type="button" id="startBtn">Start Session</button>
         <button id="clearBtn" class="secondary">Clear</button>
       </div>
 
@@ -45,8 +45,9 @@
           <div id="meta" class="meta"></div>
         </div>
         <div class="voice-controls">
-          <button id="voiceToggle">🎤 Start Listening</button>
-          <button id="muteTts" class="secondary">🔇 Mute TTS</button>
+            <button id="voiceToggle">🎤 Start Listening</button>
+            <button id="muteTts" class="secondary">🔇 Mute TTS</button>
+            <button id="openTabBtn" class="secondary hidden">Open in new tab</button>
         </div>
       </div>
 
@@ -68,6 +69,31 @@
 
       <div id="log" class="log"></div>
     </section>
+
+    <!-- Preview modal -->
+    <div id="previewModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+      <div class="modal-content">
+        <header class="modal-header">
+          <h3 id="previewTitle">Preview Recipe</h3>
+          <button id="previewClose" class="modal-close" aria-label="Close">✕</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="preview-meta">
+            <strong id="previewTitleText"></strong>
+            <div id="previewStepsCount" class="meta"></div>
+          </div>
+          <div class="preview-json">
+            <pre id="previewJson" tabindex="0"></pre>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button id="previewConfirm">Start Session</button>
+          <button id="previewCancel" class="secondary">Cancel</button>
+        </footer>
+      </div>
+    </div>
 
     <footer>
       <small>Backend: <code id="backendUrl">http://localhost:8000</code></small>
