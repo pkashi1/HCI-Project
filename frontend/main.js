@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const askBtn = document.getElementById('askBtn');
   const voiceToggle = document.getElementById('voiceToggle');
   const muteTts = document.getElementById('muteTts');
-  const openTabBtn = document.getElementById('openTabBtn');
 
   let sessionId = null;
   let totalSteps = 0;
@@ -78,7 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let recognition = null;
   let listening = false;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  if (SpeechRecognition) {
+
+  // Function to initialize speech recognition when needed
+  function initializeSpeechRecognition() {
+    if (!SpeechRecognition || recognition) return recognition;
+    
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = false;
@@ -99,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
       listening = false;
       voiceToggle.textContent = '🎤 Start Listening';
     });
+
+    return recognition;
   }
   startBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -223,68 +228,53 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const data = await resp.json();
-      sessionId = data.session_id;
-      totalSteps = data.total_steps || 0;
-      recipeTitleEl.textContent = data.recipe_title || (recipe.title || 'Recipe');
-      totalStepsEl.textContent = String(totalSteps);
-      metaEl.textContent = `Session: ${sessionId}`;
-  // show "open in new tab" control
-  if (openTabBtn) openTabBtn.classList.remove('hidden');
-      setStatus('Session started');
-      document.getElementById('setup').classList.add('hidden');
-      sessionSection.classList.remove('hidden');
-
-      await navigate('repeat', { speakOnLoad: true });
+      const newSessionId = data.session_id;
+      setStatus('Session started (opened in new tab)');
+      // Open started session in a new tab using same index page with session param
+      const targetUrl = `index.html?session=${encodeURIComponent(newSessionId)}`;
+      window.open(targetUrl, '_blank');
+      // Keep current page on setup; do not reveal inline session UI
     } catch (e) {
       setStatus('Could not start session');
       log('Start exception:', e.message || e);
     }
   }
 
-  // Open session UI in a new tab/window
-  if (openTabBtn) {
-    openTabBtn.addEventListener('click', () => {
-      if (!sessionId) return;
-      const url = new URL(window.location.href);
-      url.searchParams.set('session', sessionId);
-      window.open(url.toString(), '_blank');
-    });
-  }
-
-  // If page loaded with ?session=<id>, try to load that session state and show session UI
-  (async function loadSessionFromUrl() {
+  // Auto-load session if index opened with ?session=<id>
+  (async function autoLoadSessionFromParam() {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get('session');
+    if (!sid) return; // no session param; stay in setup mode
+    setStatus('Loading session...');
     try {
-      const params = new URLSearchParams(window.location.search);
-      const sid = params.get('session');
-      if (!sid) return;
-      // fetch session state from backend
-      setStatus('Loading session...');
-      const resp = await fetch(`${BASE_URL}/session/${encodeURIComponent(sid)}`);
+      const resp = await fetch(`${BASE_URL}/session/step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sid, action: 'repeat' })
+      });
       if (!resp.ok) {
-        setStatus('Could not load session');
-        log('Load session failed:', await resp.text());
+        setStatus('Failed to load session');
+        log('Load error:', await resp.text());
         return;
       }
       const data = await resp.json();
-      // populate UI
+      //log('Session data:', data);
+      console.log('Loaded session data:', data);
       sessionId = sid;
       totalSteps = data.total_steps || 0;
       currentStep = data.current_step || 0;
-      recipeTitleEl.textContent = data.recipe && (data.recipe.title || data.recipe.name) || data.recipe_title || 'Recipe';
+      recipeTitleEl.textContent = data.recipe_title || data.recipe?.title || 'Recipe';
       totalStepsEl.textContent = String(totalSteps);
       currentStepEl.textContent = String(currentStep);
-      // current step instruction
-      const stepData = data.current_step_data || (data.recipe && data.recipe.steps && data.recipe.steps[currentStep-1]);
-      if (stepData && stepData.instruction) {
-        instructionEl.textContent = stepData.instruction;
-      }
-      // show controls
+      metaEl.textContent = `Session: ${sessionId}`;
+      instructionEl.textContent = data.step_data?.instruction || 'No instruction loaded';
       document.getElementById('setup').classList.add('hidden');
       sessionSection.classList.remove('hidden');
-      if (openTabBtn) openTabBtn.classList.remove('hidden');
       setStatus('Session loaded');
+      if (instructionEl.textContent && !ttsMuted) speak(instructionEl.textContent);
     } catch (e) {
-      log('Error loading session from URL:', e.message || e);
+      setStatus('Could not load session');
+      log('Load exception:', e.message || e);
     }
   })();
 
@@ -407,13 +397,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Voice controls
   voiceToggle.addEventListener('click', () => {
-    if (!recognition) {
+    if (!SpeechRecognition) {
       alert('SpeechRecognition not supported in this browser. Use Chrome/Edge with microphone.');
       return;
     }
+
+    // Initialize speech recognition on first click (this triggers permission prompt)
+    if (!recognition) {
+      recognition = initializeSpeechRecognition();
+      if (!recognition) {
+        alert('Failed to initialize speech recognition.');
+        return;
+      }
+    }
+
     listening = !listening;
     if (listening) {
-      recognition.start();
+      recognition.start(); // This will prompt for microphone access on first use
       voiceToggle.textContent = '🎤 Listening... (click to stop)';
       log('Listening started');
     } else {
