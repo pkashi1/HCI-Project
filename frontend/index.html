@@ -50,6 +50,23 @@
         </div>
       </div>
 
+      <!-- YouTube Video Embed (shown only if available) -->
+      <div id="youtubeEmbed" class="youtube-embed hidden">
+        <div class="embed-header">
+          <h3>🎥 Original Recipe Video</h3>
+          <button id="toggleEmbed" class="toggle-btn">Hide Video</button>
+        </div>
+        <div class="video-container">
+          <iframe id="youtubePlayer" 
+                  src="" 
+                  title="Recipe Video" 
+                  frameborder="0" 
+                  referrerpolicy="strict-origin-when-cross-origin" 
+                  allowfullscreen>
+          </iframe>
+        </div>
+      </div>
+
       <!-- Ingredients will be populated dynamically -->
       <div id="ingredients" class="ingredients"></div>
 

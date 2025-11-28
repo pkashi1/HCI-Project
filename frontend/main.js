@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const backendUrlEl = document.getElementById('backendUrl');
   backendUrlEl.textContent = BASE_URL;
 
+  // YouTube embed elements
+  const youtubeEmbed = document.getElementById('youtubeEmbed');
+  const youtubePlayer = document.getElementById('youtubePlayer');
+  const toggleEmbedBtn = document.getElementById('toggleEmbed');
+
   // Small UI helpers
   function log(...args) {
     try {
@@ -72,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentStep = 0;
   let ttsMuted = false;
   let extractedRecipe = null; // store recipe produced by /extract
+  let ingestedVideoData = null; // store video metadata from ingestion
 
   // Speech recognition setup
   let recognition = null;
@@ -86,19 +92,37 @@ document.addEventListener('DOMContentLoaded', () => {
     recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognition.continuous = true; // Enable continuous recognition
 
     recognition.addEventListener('result', (ev) => {
-      const text = ev.results[0][0].transcript;
+      const text = ev.results[ev.results.length - 1][0].transcript;
       log(`Heard: ${text}`);
       handleUserInput(text);
     });
 
     recognition.addEventListener('end', () => {
-      if (listening) recognition.start();
+      // Only restart if we're still supposed to be listening
+      // Add a small delay to prevent rapid restarts
+      if (listening) {
+        setTimeout(() => {
+          if (listening) { // Check again after delay
+            try {
+              recognition.start();
+            } catch (e) {
+              console.log('Recognition restart failed:', e);
+              listening = false;
+              voiceToggle.textContent = '🎤 Start Listening';
+            }
+          }
+        }, 100);
+      }
     });
 
     recognition.addEventListener('error', (ev) => {
       log('ASR error: ' + ev.error);
+      if (ev.error === 'not-allowed' || ev.error === 'permission-denied') {
+        log('Microphone access denied');
+      }
       listening = false;
       voiceToggle.textContent = '🎤 Start Listening';
     });
@@ -162,6 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const data = await resp.json();
+      // Store video metadata for later use
+      ingestedVideoData = {
+        video_id: data.video_id,
+        title: data.title,
+        youtube_url: url
+      };
       // Put transcript into textarea for inspection or edit
       recipeText.value = data.transcript || '';
       // Remember title in UI
@@ -197,6 +227,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const data = await resp.json();
       extractedRecipe = data.recipe;
+      
+      // Add video metadata to the extracted recipe if available
+      console.log('Ingested video data:', ingestedVideoData);
+      if (ingestedVideoData) {
+        console.log('Adding video metadata to recipe');
+        extractedRecipe.video_id = ingestedVideoData.video_id;
+        extractedRecipe.video_title = ingestedVideoData.title;
+        extractedRecipe.youtube_url = ingestedVideoData.youtube_url;
+        console.log('Recipe after adding video metadata:', extractedRecipe);
+      } else {
+        console.log('No ingested video data available');
+      }
+      
       setStatus('Recipe extracted — starting session');
       log('Extracted recipe:', extractedRecipe.title || extractedRecipe.name || 'recipe');
       await startSessionWithRecipe(extractedRecipe);
@@ -247,10 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sid) return; // no session param; stay in setup mode
     setStatus('Loading session...');
     try {
-      const resp = await fetch(`${BASE_URL}/session/step`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sid, action: 'repeat' })
+      const resp = await fetch(`${BASE_URL}/session/${sid}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (!resp.ok) {
         setStatus('Failed to load session');
@@ -260,6 +302,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await resp.json();
       //log('Session data:', data);
       console.log('Loaded session data:', data);
+      console.log('Session data keys:', Object.keys(data));
+      console.log('Session recipe data:', data.recipe);
+      if (data.recipe) {
+        console.log('Recipe keys:', Object.keys(data.recipe));
+        console.log('Recipe video_id:', data.recipe.video_id);
+      }
+      
       sessionId = sid;
       totalSteps = data.total_steps || 0;
       currentStep = data.current_step || 0;
@@ -268,6 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
       currentStepEl.textContent = String(currentStep);
       metaEl.textContent = `Session: ${sessionId}`;
       instructionEl.textContent = data.step_data?.instruction || 'No instruction loaded';
+      
+      // Setup YouTube embed if available
+      setupYouTubeEmbed(data);
+      
       document.getElementById('setup').classList.add('hidden');
       sessionSection.classList.remove('hidden');
       setStatus('Session loaded');
@@ -323,6 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
   clearBtn.addEventListener('click', () => {
     recipeFile.value = '';
     recipeText.value = '';
+    youtubeUrl.value = '';
+    ingestedVideoData = null; // Clear video metadata
+    extractedRecipe = null; // Clear extracted recipe
     setStatus('Idle');
   });
 
@@ -390,6 +446,38 @@ document.addEventListener('DOMContentLoaded', () => {
       const responseText = data.response || JSON.stringify(data);
       log('Assistant: ' + responseText);
       speak(responseText);
+
+      // Update UI if session state changed (current_step, total_steps are returned)
+      if (data.current_step !== undefined) {
+        currentStep = data.current_step;
+        currentStepEl.textContent = String(currentStep);
+      }
+      if (data.total_steps !== undefined) {
+        totalSteps = data.total_steps;
+        totalStepsEl.textContent = String(totalSteps);
+      }
+
+      // Refresh current step instruction after navigation commands
+      const lowerQuery = q.toLowerCase();
+      if (lowerQuery.includes('next') || lowerQuery.includes('previous') || 
+          lowerQuery.includes('repeat') || lowerQuery.includes('go to step')) {
+        // Fetch current step data to update instruction
+        try {
+          const stepResp = await fetch(`${BASE_URL}/session/step`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, action: 'repeat' })
+          });
+          if (stepResp.ok) {
+            const stepData = await stepResp.json();
+            if (stepData.step_data?.instruction) {
+              instructionEl.textContent = stepData.step_data.instruction;
+            }
+          }
+        } catch (e) {
+          // Silent fail - don't break the main query flow
+        }
+      }
     } catch (e) {
       log('Query exception: ' + e.message);
     }
@@ -427,6 +515,121 @@ document.addEventListener('DOMContentLoaded', () => {
     ttsMuted = !ttsMuted;
     muteTts.textContent = ttsMuted ? '🔈 Unmute TTS' : '🔇 Mute TTS';
   });
+
+  // YouTube embed toggle
+  toggleEmbedBtn.addEventListener('click', () => {
+    const isMinimized = youtubeEmbed.classList.contains('minimized');
+    if (isMinimized) {
+      youtubeEmbed.classList.remove('minimized');
+      toggleEmbedBtn.textContent = 'Hide Video';
+    } else {
+      youtubeEmbed.classList.add('minimized');
+      toggleEmbedBtn.textContent = 'Show Video';
+    }
+  });
+
+  // Test function to manually check a video ID (for debugging)
+  window.testYouTubeEmbed = function(videoId) {
+    console.log('Testing video ID:', videoId);
+    setupYouTubeEmbed({video_id: videoId});
+  };
+
+  // Setup YouTube embed if video ID is available
+  function setupYouTubeEmbed(recipeData) {
+    console.log('Setting up YouTube embed with data:', recipeData);
+    console.log('Recipe data keys:', Object.keys(recipeData || {}));
+    console.log('Recipe nested data:', recipeData?.recipe ? Object.keys(recipeData.recipe) : 'no recipe property');
+    
+    // Look for video_id in multiple possible locations
+    const videoId = recipeData?.video_id || 
+                   recipeData?.recipe?.video_id || 
+                   recipeData?.recipe?.video?.id ||
+                   recipeData?.videoId;
+                   
+    console.log('Checking video_id locations:');
+    console.log('- recipeData.video_id:', recipeData?.video_id);
+    console.log('- recipeData.recipe.video_id:', recipeData?.recipe?.video_id);
+    console.log('- recipeData.recipe.video.id:', recipeData?.recipe?.video?.id);
+    console.log('- recipeData.videoId:', recipeData?.videoId);
+    console.log('Final video_id:', videoId);
+    
+    if (videoId) {
+      // Validate video ID format (should be 11 characters)
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        console.error('Invalid YouTube video ID format:', videoId);
+        log(`❌ Invalid video ID format: ${videoId}`);
+        youtubeEmbed.classList.add('hidden');
+        return;
+      }
+      
+      // Try YouTube's privacy-enhanced mode first
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
+      console.log('Setting embed URL (privacy-enhanced):', embedUrl);
+      
+      // Test if the video exists by trying to load it
+      console.log('Testing video availability at:', `https://www.youtube.com/watch?v=${videoId}`);
+      
+      // Create fallback content for embedding failures
+      const videoContainer = youtubeEmbed.querySelector('.video-container');
+      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      
+      // Remove any existing fallback
+      const existingFallback = videoContainer.querySelector('.video-fallback');
+      if (existingFallback) {
+        existingFallback.remove();
+      }
+      
+      // Create fallback div
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.className = 'video-fallback';
+      fallbackDiv.style.cssText = `
+        display: none;
+        padding: 40px 20px;
+        text-align: center;
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        border-radius: 8px;
+        border: 2px dashed #cbd5e0;
+      `;
+      
+      fallbackDiv.innerHTML = `
+        <div style="margin-bottom: 16px; font-size: 24px;">🎥</div>
+        <div style="margin-bottom: 12px; font-weight: 600; color: #2d3748; font-size: 18px;">Recipe Video Available</div>
+        <div style="margin-bottom: 16px; color: #4a5568; font-size: 14px;">This video cannot be embedded due to YouTube restrictions</div>
+        <a href="${watchUrl}" target="_blank" style="
+          display: inline-block;
+          background: #ff0000;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 6px;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 16px;
+          transition: all 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        " onmouseover="this.style.background='#cc0000'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#ff0000'; this.style.transform='translateY(0)'">
+          ▶ Watch on YouTube
+        </a>
+      `;
+      
+      videoContainer.appendChild(fallbackDiv);
+      
+      // Try to embed the video first
+      youtubePlayer.src = embedUrl;
+      youtubeEmbed.classList.remove('hidden');
+      log(`� Attempting to embed video: ${videoId}`);
+      
+      // Show fallback if embedding fails (Error 153 appears quickly)
+      setTimeout(() => {
+        // For Error 153, show the fallback immediately
+        fallbackDiv.style.display = 'block';
+        youtubePlayer.style.display = 'none';
+        log(`🔗 Showing YouTube link instead of embed for: ${videoId}`);
+      }, 2000);
+    } else {
+      console.log('No video_id found, hiding embed');
+      youtubeEmbed.classList.add('hidden');
+    }
+  }
 
   // Handle textual commands from ASR or typed
   function handleUserInput(text) {

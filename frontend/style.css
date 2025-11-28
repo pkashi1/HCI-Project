@@ -430,6 +430,72 @@ footer code {
   border: 1px solid #4a5568;
 }
 
+/* YouTube Embed Styles */
+.youtube-embed {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+  border: 2px solid #e2e8f0;
+}
+
+.embed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.embed-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.toggle-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  overflow: hidden;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.youtube-embed.minimized .video-container {
+  display: none;
+}
+
+.youtube-embed.minimized .embed-header {
+  background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
+  color: #2d3748;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .container {
@@ -465,5 +531,19 @@ footer code {
   
   .ask input {
     margin-bottom: 8px;
+  }
+  
+  .youtube-embed {
+    margin-bottom: 16px;
+  }
+  
+  .embed-header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .embed-header h3 {
+    font-size: 1rem;
   }
 }
