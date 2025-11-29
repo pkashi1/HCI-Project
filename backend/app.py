@@ -1,389 +1,20 @@
-# """
-# FastAPI backend for voice cooking assistant.
-# Handles recipe ingestion, extraction, session management, and cooking assistance.
-# """
-# from fastapi import FastAPI, HTTPException, BackgroundTasks
-# from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel
-# from typing import Optional, Dict, List
-# import asyncio
+"""
+FastAPI backend for voice cooking assistant.
+Handles recipe ingestion, extraction, session management, and cooking assistance.
+"""
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Body
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, Dict, List
+import asyncio
 
-# from yt_ingest import get_transcript
-# from extractors import extract_recipe
-# from state import get_session_manager, parse_time_string
-# from nlp_prompts import get_cooking_assistant_prompt
-# from llm import chat
-# import json
+from yt_ingest import get_transcript
+from extractors import extract_recipe
+from state import get_session_manager, parse_time_string
+from nlp_prompts import get_cooking_assistant_prompt
+from llm import chat
+import json
 
-
-# app = FastAPI(title="Voice Cooking Assistant API", version="1.0.0")
-
-# # Enable CORS for frontend
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-
-# # Request/Response Models
-# class IngestRequest(BaseModel):
-#     youtube_url: str
-
-
-# class IngestResponse(BaseModel):
-#     video_id: str
-#     title: str
-#     transcript: str
-#     snippet_count: int
-
-
-# class ExtractRequest(BaseModel):
-#     transcript: str
-#     model: Optional[str] = "phi4"
-
-
-# class ExtractResponse(BaseModel):
-#     recipe: Dict
-
-
-# class SessionStartRequest(BaseModel):
-#     recipe: Dict
-
-
-# class SessionStartResponse(BaseModel):
-#     session_id: str
-#     recipe_title: str
-#     total_steps: int
-
-
-# class SessionQueryRequest(BaseModel):
-#     session_id: str
-#     query: str
-
-
-# class SessionQueryResponse(BaseModel):
-#     response: str
-#     current_step: int
-#     total_steps: int
-#     active_timers: List[Dict]
-
-
-# class TimerRequest(BaseModel):
-#     session_id: str
-#     label: str
-#     duration: str  # e.g., "5 minutes", "30 seconds"
-
-
-# class TimerResponse(BaseModel):
-#     timer_id: str
-#     label: str
-#     seconds_total: int
-#     seconds_remaining: int
-
-
-# class StepNavigationRequest(BaseModel):
-#     session_id: str
-#     action: str  # "next", "previous", "repeat"
-
-
-# # Endpoints
-
-# @app.get("/")
-# async def root():
-#     """Health check endpoint."""
-#     return {
-#         "status": "running",
-#         "service": "Voice Cooking Assistant API",
-#         "version": "1.0.0"
-#     }
-
-
-# @app.post("/ingest", response_model=IngestResponse)
-# async def ingest_video(request: IngestRequest):
-#     """
-#     Ingest YouTube video and extract transcript.
-    
-#     Args:
-#         youtube_url: YouTube video URL or ID
-        
-#     Returns:
-#         Transcript data with metadata
-#     """
-#     try:
-#         print(f"Ingesting URL: {request.youtube_url}")
-        
-#         # Clean URL (remove HTML entities)
-#         clean_url = request.youtube_url.replace('&amp;', '&')
-#         print(f"Cleaned URL: {clean_url}")
-        
-#         result = get_transcript(clean_url)
-#         print(f"Transcript result: {result is not None}")
-        
-#         if not result:
-#             raise HTTPException(status_code=400, detail="Failed to extract transcript - no transcript available for this video")
-        
-#         print(f"Successfully extracted transcript: {len(result['text'])} characters")
-        
-#         return IngestResponse(
-#             video_id=result["video_id"],
-#             title=result["title"],
-#             transcript=result["text"],
-#             snippet_count=len(result.get("snippets", []))
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         import traceback
-#         error_detail = f"Ingestion error: {str(e)}\n{traceback.format_exc()}"
-#         print(error_detail)
-#         raise HTTPException(status_code=500, detail=error_detail)
-
-
-# @app.post("/extract", response_model=ExtractResponse)
-# async def extract_recipe_endpoint(request: ExtractRequest):
-#     """
-#     Extract structured recipe from transcript using LLM.
-    
-#     Args:
-#         transcript: Video transcript text
-#         model: LLM model to use (optional)
-        
-#     Returns:
-#         Structured recipe JSON
-#     """
-#     try:
-#         recipe = extract_recipe(request.transcript, model=request.model)
-        
-#         if not recipe:
-#             raise HTTPException(status_code=400, detail="Failed to extract recipe")
-        
-#         return ExtractResponse(recipe=recipe)
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Extraction error: {str(e)}")
-
-
-# @app.post("/session/start", response_model=SessionStartResponse)
-# async def start_session(request: SessionStartRequest):
-#     """
-#     Start a new cooking session with a recipe.
-    
-#     Args:
-#         recipe: Structured recipe JSON
-        
-#     Returns:
-#         Session ID and metadata
-#     """
-#     try:
-#         manager = get_session_manager()
-#         session = manager.create_session(request.recipe)
-        
-#         return SessionStartResponse(
-#             session_id=session.session_id,
-#             recipe_title=session.recipe.get("title", "Untitled Recipe"),
-#             total_steps=session.total_steps
-#         )
-        
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Session error: {str(e)}")
-
-
-# @app.post("/session/query", response_model=SessionQueryResponse)
-# async def query_session(request: SessionQueryRequest):
-#     """
-#     Ask a question or give a command during cooking.
-    
-#     Args:
-#         session_id: Active session ID
-#         query: User's question or command
-        
-#     Returns:
-#         Assistant's response with session state
-#     """
-#     try:
-#         manager = get_session_manager()
-#         session = manager.get_session(request.session_id)
-        
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-        
-#         # Check for completed timers
-#         completed_timers = session.check_timers()
-#         if completed_timers:
-#             timer_alerts = ", ".join([f"{t.label} is done" for t in completed_timers])
-#             prefix = f"Alert: {timer_alerts}. "
-#         else:
-#             prefix = ""
-        
-#         # Build context for LLM
-#         recipe_json = json.dumps(session.recipe, indent=2)
-#         timers_list = [f"{t.label}: {t.seconds_remaining}s remaining" for t in session.get_active_timers()]
-        
-#         messages = get_cooking_assistant_prompt(
-#             recipe_json=recipe_json,
-#             current_step=session.current_step,
-#             timers=timers_list,
-#             user_query=request.query
-#         )
-        
-#         # Get response from LLM
-#         response = chat(messages, temperature=0.7)
-        
-#         # Save session
-#         manager.update_session(session)
-        
-#         return SessionQueryResponse(
-#             response=prefix + response,
-#             current_step=session.current_step,
-#             total_steps=session.total_steps,
-#             active_timers=[t.to_dict() for t in session.get_active_timers()]
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Query error: {str(e)}")
-
-
-# @app.post("/session/step")
-# async def navigate_step(request: StepNavigationRequest):
-#     """
-#     Navigate between recipe steps.
-    
-#     Args:
-#         session_id: Active session ID
-#         action: "next", "previous", or "repeat"
-        
-#     Returns:
-#         Updated session state
-#     """
-#     try:
-#         manager = get_session_manager()
-#         session = manager.get_session(request.session_id)
-        
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-        
-#         # Perform navigation
-#         if request.action == "next":
-#             success = session.next_step()
-#             message = "Moved to next step" if success else "Already at last step"
-#         elif request.action == "previous":
-#             success = session.previous_step()
-#             message = "Moved to previous step" if success else "Already at first step"
-#         elif request.action == "repeat":
-#             message = "Repeating current step"
-#         else:
-#             raise HTTPException(status_code=400, detail="Invalid action")
-        
-#         # Save session
-#         manager.update_session(session)
-        
-#         return {
-#             "message": message,
-#             "current_step": session.current_step,
-#             "total_steps": session.total_steps,
-#             "step_data": session.current_step_data
-#         }
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Navigation error: {str(e)}")
-
-
-# @app.post("/session/timer", response_model=TimerResponse)
-# async def add_timer(request: TimerRequest):
-#     """
-#     Add a timer to the session.
-    
-#     Args:
-#         session_id: Active session ID
-#         label: Timer label (e.g., "Boil pasta")
-#         duration: Duration string (e.g., "10 minutes")
-        
-#     Returns:
-#         Timer details
-#     """
-#     try:
-#         manager = get_session_manager()
-#         session = manager.get_session(request.session_id)
-        
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-        
-#         # Parse duration
-#         seconds = parse_time_string(request.duration)
-#         if seconds is None:
-#             raise HTTPException(status_code=400, detail="Invalid duration format")
-        
-#         # Add timer
-#         timer = session.add_timer(request.label, seconds)
-        
-#         # Save session
-#         manager.update_session(session)
-        
-#         return TimerResponse(
-#             timer_id=timer.id,
-#             label=timer.label,
-#             seconds_total=timer.seconds_total,
-#             seconds_remaining=timer.seconds_remaining
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Timer error: {str(e)}")
-
-
-# @app.get("/session/{session_id}")
-# async def get_session_state(session_id: str):
-#     """
-#     Get current session state.
-    
-#     Args:
-#         session_id: Session ID
-        
-#     Returns:
-#         Complete session state
-#     """
-#     try:
-#         manager = get_session_manager()
-#         session = manager.get_session(session_id)
-        
-#         if not session:
-#             raise HTTPException(status_code=404, detail="Session not found")
-        
-#         # Check for completed timers
-#         session.check_timers()
-#         manager.update_session(session)
-        
-#         return session.to_dict()
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Session error: {str(e)}")
-
-
-# @app.get("/sessions")
-# async def list_sessions():
-#     """List all sessions."""
-#     try:
-#         manager = get_session_manager()
-#         session_ids = manager.list_sessions()
-#         return {"sessions": session_ids, "count": len(session_ids)}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
 """
 FastAPI backend for voice cooking assistant.
 Handles recipe ingestion, extraction, session management, and cooking assistance.
@@ -474,6 +105,21 @@ class TimerResponse(BaseModel):
 class StepNavigationRequest(BaseModel):
     session_id: str
     action: str  # "next", "previous", "repeat"
+
+
+class SaveRecipeRequest(BaseModel):
+    title: str
+    description: str
+    recipe: Dict
+
+
+class RecipeResponse(BaseModel):
+    id: int
+    title: str
+    description: str
+    recipe: Dict
+    created_at: float
+    updated_at: float
 
 
 # Endpoints
@@ -843,6 +489,44 @@ async def list_sessions():
         return {"sessions": session_ids, "count": len(session_ids)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.post("/recipes", response_model=RecipeResponse)
+async def save_recipe(request: SaveRecipeRequest):
+    """Save a recipe to the database."""
+    try:
+        manager = get_session_manager()
+        recipe_id = manager.save_recipe(request.title, request.description, request.recipe)
+        saved_recipe = manager.get_recipe(recipe_id)
+        return saved_recipe
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving recipe: {str(e)}")
+
+
+@app.get("/recipes", response_model=List[RecipeResponse])
+async def list_recipes():
+    """List all saved recipes."""
+    try:
+        manager = get_session_manager()
+        recipes = manager.list_recipes()
+        return recipes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing recipes: {str(e)}")
+
+
+@app.get("/recipes/{recipe_id}", response_model=RecipeResponse)
+async def get_recipe(recipe_id: int):
+    """Get a specific recipe by ID."""
+    try:
+        manager = get_session_manager()
+        recipe = manager.get_recipe(recipe_id)
+        if not recipe:
+            raise HTTPException(status_code=404, detail="Recipe not found")
+        return recipe
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving recipe: {str(e)}")
 
 
 if __name__ == "__main__":

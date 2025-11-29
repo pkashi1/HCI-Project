@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Mac system file
+.DS_Store
+
+# SQLite DB
+runtime/*.sqlite
+*.sqlite
+
+# Virtual environments
+venv/
+env/
+
+# Node
+node_modules/
+
+# Frontend builds
+dist/
+build/
+.next/
