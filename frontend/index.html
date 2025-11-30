@@ -45,11 +45,30 @@
           <div id="meta" class="meta"></div>
         </div>
         <div class="voice-controls">
-            <button id="voiceToggle">🎤 Start Listening</button>
-            <button id="muteTts" class="secondary">🔇 Mute TTS</button>
-            <button id="openTabBtn" class="secondary hidden">Open in new tab</button>
+          <button id="voiceToggle">🎤 Start Listening</button>
+          <button id="muteTts" class="secondary">🔇 Mute TTS</button>
         </div>
       </div>
+
+      <!-- YouTube Video Embed (shown only if available) -->
+      <div id="youtubeEmbed" class="youtube-embed hidden">
+        <div class="embed-header">
+          <h3>🎥 Original Recipe Video</h3>
+          <button id="toggleEmbed" class="toggle-btn">Hide Video</button>
+        </div>
+        <div class="video-container">
+          <iframe id="youtubePlayer" 
+                  src="" 
+                  title="Recipe Video" 
+                  frameborder="0" 
+                  referrerpolicy="strict-origin-when-cross-origin" 
+                  allowfullscreen>
+          </iframe>
+        </div>
+      </div>
+
+      <!-- Ingredients will be populated dynamically -->
+      <div id="ingredients" class="ingredients"></div>
 
       <div class="step-card">
         <div class="step-number">Step <span id="currentStep">-</span> / <span id="totalSteps">-</span></div>

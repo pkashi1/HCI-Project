@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const backendUrlEl = document.getElementById('backendUrl');
   backendUrlEl.textContent = BASE_URL;
 
+  // YouTube embed elements
+  const youtubeEmbed = document.getElementById('youtubeEmbed');
+  const youtubePlayer = document.getElementById('youtubePlayer');
+  const toggleEmbedBtn = document.getElementById('toggleEmbed');
+
   // Small UI helpers
   function log(...args) {
     try {
@@ -66,39 +71,63 @@ document.addEventListener('DOMContentLoaded', () => {
   const askBtn = document.getElementById('askBtn');
   const voiceToggle = document.getElementById('voiceToggle');
   const muteTts = document.getElementById('muteTts');
-  const openTabBtn = document.getElementById('openTabBtn');
 
   let sessionId = null;
   let totalSteps = 0;
   let currentStep = 0;
   let ttsMuted = false;
   let extractedRecipe = null; // store recipe produced by /extract
+  let ingestedVideoData = null; // store video metadata from ingestion
 
   // Speech recognition setup
   let recognition = null;
   let listening = false;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  if (SpeechRecognition) {
+
+  // Function to initialize speech recognition when needed
+  function initializeSpeechRecognition() {
+    if (!SpeechRecognition || recognition) return recognition;
+    
     recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognition.continuous = true; // Enable continuous recognition
 
     recognition.addEventListener('result', (ev) => {
-      const text = ev.results[0][0].transcript;
+      const text = ev.results[ev.results.length - 1][0].transcript;
       log(`Heard: ${text}`);
       handleUserInput(text);
     });
 
     recognition.addEventListener('end', () => {
-      if (listening) recognition.start();
+      // Only restart if we're still supposed to be listening
+      // Add a small delay to prevent rapid restarts
+      if (listening) {
+        setTimeout(() => {
+          if (listening) { // Check again after delay
+            try {
+              recognition.start();
+            } catch (e) {
+              console.log('Recognition restart failed:', e);
+              listening = false;
+              voiceToggle.textContent = '🎤 Start Listening';
+            }
+          }
+        }, 100);
+      }
     });
 
     recognition.addEventListener('error', (ev) => {
       log('ASR error: ' + ev.error);
+      if (ev.error === 'not-allowed' || ev.error === 'permission-denied') {
+        log('Microphone access denied');
+      }
       listening = false;
       voiceToggle.textContent = '🎤 Start Listening';
     });
+
+    return recognition;
   }
   startBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -157,6 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const data = await resp.json();
+      // Store video metadata for later use
+      ingestedVideoData = {
+        video_id: data.video_id,
+        title: data.title,
+        youtube_url: url
+      };
       // Put transcript into textarea for inspection or edit
       recipeText.value = data.transcript || '';
       // Remember title in UI
@@ -192,6 +227,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const data = await resp.json();
       extractedRecipe = data.recipe;
+      
+      // Add video metadata to the extracted recipe if available
+      console.log('Ingested video data:', ingestedVideoData);
+      if (ingestedVideoData) {
+        console.log('Adding video metadata to recipe');
+        extractedRecipe.video_id = ingestedVideoData.video_id;
+        extractedRecipe.video_title = ingestedVideoData.title;
+        extractedRecipe.youtube_url = ingestedVideoData.youtube_url;
+        console.log('Recipe after adding video metadata:', extractedRecipe);
+      } else {
+        console.log('No ingested video data available');
+      }
+      
       setStatus('Recipe extracted — starting session');
       log('Extracted recipe:', extractedRecipe.title || extractedRecipe.name || 'recipe');
       await startSessionWithRecipe(extractedRecipe);
@@ -223,68 +271,63 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const data = await resp.json();
-      sessionId = data.session_id;
-      totalSteps = data.total_steps || 0;
-      recipeTitleEl.textContent = data.recipe_title || (recipe.title || 'Recipe');
-      totalStepsEl.textContent = String(totalSteps);
-      metaEl.textContent = `Session: ${sessionId}`;
-  // show "open in new tab" control
-  if (openTabBtn) openTabBtn.classList.remove('hidden');
-      setStatus('Session started');
-      document.getElementById('setup').classList.add('hidden');
-      sessionSection.classList.remove('hidden');
-
-      await navigate('repeat', { speakOnLoad: true });
+      const newSessionId = data.session_id;
+      setStatus('Session started (opened in new tab)');
+      // Open started session in a new tab using same index page with session param
+      const targetUrl = `index.html?session=${encodeURIComponent(newSessionId)}`;
+      window.open(targetUrl, '_blank');
+      // Keep current page on setup; do not reveal inline session UI
     } catch (e) {
       setStatus('Could not start session');
       log('Start exception:', e.message || e);
     }
   }
 
-  // Open session UI in a new tab/window
-  if (openTabBtn) {
-    openTabBtn.addEventListener('click', () => {
-      if (!sessionId) return;
-      const url = new URL(window.location.href);
-      url.searchParams.set('session', sessionId);
-      window.open(url.toString(), '_blank');
-    });
-  }
-
-  // If page loaded with ?session=<id>, try to load that session state and show session UI
-  (async function loadSessionFromUrl() {
+  // Auto-load session if index opened with ?session=<id>
+  (async function autoLoadSessionFromParam() {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get('session');
+    if (!sid) return; // no session param; stay in setup mode
+    setStatus('Loading session...');
     try {
-      const params = new URLSearchParams(window.location.search);
-      const sid = params.get('session');
-      if (!sid) return;
-      // fetch session state from backend
-      setStatus('Loading session...');
-      const resp = await fetch(`${BASE_URL}/session/${encodeURIComponent(sid)}`);
+      const resp = await fetch(`${BASE_URL}/session/${sid}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!resp.ok) {
-        setStatus('Could not load session');
-        log('Load session failed:', await resp.text());
+        setStatus('Failed to load session');
+        log('Load error:', await resp.text());
         return;
       }
       const data = await resp.json();
-      // populate UI
+      //log('Session data:', data);
+      console.log('Loaded session data:', data);
+      console.log('Session data keys:', Object.keys(data));
+      console.log('Session recipe data:', data.recipe);
+      if (data.recipe) {
+        console.log('Recipe keys:', Object.keys(data.recipe));
+        console.log('Recipe video_id:', data.recipe.video_id);
+      }
+      
       sessionId = sid;
       totalSteps = data.total_steps || 0;
       currentStep = data.current_step || 0;
-      recipeTitleEl.textContent = data.recipe && (data.recipe.title || data.recipe.name) || data.recipe_title || 'Recipe';
+      recipeTitleEl.textContent = data.recipe_title || data.recipe?.title || 'Recipe';
       totalStepsEl.textContent = String(totalSteps);
       currentStepEl.textContent = String(currentStep);
-      // current step instruction
-      const stepData = data.current_step_data || (data.recipe && data.recipe.steps && data.recipe.steps[currentStep-1]);
-      if (stepData && stepData.instruction) {
-        instructionEl.textContent = stepData.instruction;
-      }
-      // show controls
+      metaEl.textContent = `Session: ${sessionId}`;
+      instructionEl.textContent = data.step_data?.instruction || 'No instruction loaded';
+      
+      // Setup YouTube embed if available
+      setupYouTubeEmbed(data);
+      
       document.getElementById('setup').classList.add('hidden');
       sessionSection.classList.remove('hidden');
-      if (openTabBtn) openTabBtn.classList.remove('hidden');
       setStatus('Session loaded');
+      if (instructionEl.textContent && !ttsMuted) speak(instructionEl.textContent);
     } catch (e) {
-      log('Error loading session from URL:', e.message || e);
+      setStatus('Could not load session');
+      log('Load exception:', e.message || e);
     }
   })();
 
@@ -333,6 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
   clearBtn.addEventListener('click', () => {
     recipeFile.value = '';
     recipeText.value = '';
+    youtubeUrl.value = '';
+    ingestedVideoData = null; // Clear video metadata
+    extractedRecipe = null; // Clear extracted recipe
     setStatus('Idle');
   });
 
@@ -400,6 +446,38 @@ document.addEventListener('DOMContentLoaded', () => {
       const responseText = data.response || JSON.stringify(data);
       log('Assistant: ' + responseText);
       speak(responseText);
+
+      // Update UI if session state changed (current_step, total_steps are returned)
+      if (data.current_step !== undefined) {
+        currentStep = data.current_step;
+        currentStepEl.textContent = String(currentStep);
+      }
+      if (data.total_steps !== undefined) {
+        totalSteps = data.total_steps;
+        totalStepsEl.textContent = String(totalSteps);
+      }
+
+      // Refresh current step instruction after navigation commands
+      const lowerQuery = q.toLowerCase();
+      if (lowerQuery.includes('next') || lowerQuery.includes('previous') || 
+          lowerQuery.includes('repeat') || lowerQuery.includes('go to step')) {
+        // Fetch current step data to update instruction
+        try {
+          const stepResp = await fetch(`${BASE_URL}/session/step`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, action: 'repeat' })
+          });
+          if (stepResp.ok) {
+            const stepData = await stepResp.json();
+            if (stepData.step_data?.instruction) {
+              instructionEl.textContent = stepData.step_data.instruction;
+            }
+          }
+        } catch (e) {
+          // Silent fail - don't break the main query flow
+        }
+      }
     } catch (e) {
       log('Query exception: ' + e.message);
     }
@@ -407,13 +485,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Voice controls
   voiceToggle.addEventListener('click', () => {
-    if (!recognition) {
+    if (!SpeechRecognition) {
       alert('SpeechRecognition not supported in this browser. Use Chrome/Edge with microphone.');
       return;
     }
+
+    // Initialize speech recognition on first click (this triggers permission prompt)
+    if (!recognition) {
+      recognition = initializeSpeechRecognition();
+      if (!recognition) {
+        alert('Failed to initialize speech recognition.');
+        return;
+      }
+    }
+
     listening = !listening;
     if (listening) {
-      recognition.start();
+      recognition.start(); // This will prompt for microphone access on first use
       voiceToggle.textContent = '🎤 Listening... (click to stop)';
       log('Listening started');
     } else {
@@ -427,6 +515,121 @@ document.addEventListener('DOMContentLoaded', () => {
     ttsMuted = !ttsMuted;
     muteTts.textContent = ttsMuted ? '🔈 Unmute TTS' : '🔇 Mute TTS';
   });
+
+  // YouTube embed toggle
+  toggleEmbedBtn.addEventListener('click', () => {
+    const isMinimized = youtubeEmbed.classList.contains('minimized');
+    if (isMinimized) {
+      youtubeEmbed.classList.remove('minimized');
+      toggleEmbedBtn.textContent = 'Hide Video';
+    } else {
+      youtubeEmbed.classList.add('minimized');
+      toggleEmbedBtn.textContent = 'Show Video';
+    }
+  });
+
+  // Test function to manually check a video ID (for debugging)
+  window.testYouTubeEmbed = function(videoId) {
+    console.log('Testing video ID:', videoId);
+    setupYouTubeEmbed({video_id: videoId});
+  };
+
+  // Setup YouTube embed if video ID is available
+  function setupYouTubeEmbed(recipeData) {
+    console.log('Setting up YouTube embed with data:', recipeData);
+    console.log('Recipe data keys:', Object.keys(recipeData || {}));
+    console.log('Recipe nested data:', recipeData?.recipe ? Object.keys(recipeData.recipe) : 'no recipe property');
+    
+    // Look for video_id in multiple possible locations
+    const videoId = recipeData?.video_id || 
+                   recipeData?.recipe?.video_id || 
+                   recipeData?.recipe?.video?.id ||
+                   recipeData?.videoId;
+                   
+    console.log('Checking video_id locations:');
+    console.log('- recipeData.video_id:', recipeData?.video_id);
+    console.log('- recipeData.recipe.video_id:', recipeData?.recipe?.video_id);
+    console.log('- recipeData.recipe.video.id:', recipeData?.recipe?.video?.id);
+    console.log('- recipeData.videoId:', recipeData?.videoId);
+    console.log('Final video_id:', videoId);
+    
+    if (videoId) {
+      // Validate video ID format (should be 11 characters)
+      if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        console.error('Invalid YouTube video ID format:', videoId);
+        log(`❌ Invalid video ID format: ${videoId}`);
+        youtubeEmbed.classList.add('hidden');
+        return;
+      }
+      
+      // Try YouTube's privacy-enhanced mode first
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`;
+      console.log('Setting embed URL (privacy-enhanced):', embedUrl);
+      
+      // Test if the video exists by trying to load it
+      console.log('Testing video availability at:', `https://www.youtube.com/watch?v=${videoId}`);
+      
+      // Create fallback content for embedding failures
+      const videoContainer = youtubeEmbed.querySelector('.video-container');
+      const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      
+      // Remove any existing fallback
+      const existingFallback = videoContainer.querySelector('.video-fallback');
+      if (existingFallback) {
+        existingFallback.remove();
+      }
+      
+      // Create fallback div
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.className = 'video-fallback';
+      fallbackDiv.style.cssText = `
+        display: none;
+        padding: 40px 20px;
+        text-align: center;
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        border-radius: 8px;
+        border: 2px dashed #cbd5e0;
+      `;
+      
+      fallbackDiv.innerHTML = `
+        <div style="margin-bottom: 16px; font-size: 24px;">🎥</div>
+        <div style="margin-bottom: 12px; font-weight: 600; color: #2d3748; font-size: 18px;">Recipe Video Available</div>
+        <div style="margin-bottom: 16px; color: #4a5568; font-size: 14px;">This video cannot be embedded due to YouTube restrictions</div>
+        <a href="${watchUrl}" target="_blank" style="
+          display: inline-block;
+          background: #ff0000;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 6px;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 16px;
+          transition: all 0.2s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        " onmouseover="this.style.background='#cc0000'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#ff0000'; this.style.transform='translateY(0)'">
+          ▶ Watch on YouTube
+        </a>
+      `;
+      
+      videoContainer.appendChild(fallbackDiv);
+      
+      // Try to embed the video first
+      youtubePlayer.src = embedUrl;
+      youtubeEmbed.classList.remove('hidden');
+      log(`� Attempting to embed video: ${videoId}`);
+      
+      // Show fallback if embedding fails (Error 153 appears quickly)
+      setTimeout(() => {
+        // For Error 153, show the fallback immediately
+        fallbackDiv.style.display = 'block';
+        youtubePlayer.style.display = 'none';
+        log(`🔗 Showing YouTube link instead of embed for: ${videoId}`);
+      }, 2000);
+    } else {
+      console.log('No video_id found, hiding embed');
+      youtubeEmbed.classList.add('hidden');
+    }
+  }
 
   // Handle textual commands from ASR or typed
   function handleUserInput(text) {

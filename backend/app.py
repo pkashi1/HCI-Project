@@ -74,6 +74,9 @@ class SessionStartResponse(BaseModel):
     session_id: str
     recipe_title: str
     total_steps: int
+    current_step: int
+    recipe: Dict
+    step_data: Optional[Dict] = None
 
 
 class SessionQueryRequest(BaseModel):
@@ -200,7 +203,7 @@ async def start_session(request: SessionStartRequest):
         recipe: Structured recipe JSON
         
     Returns:
-        Session ID and metadata
+        Session ID and complete metadata including recipe, steps, and current state
     """
     try:
         manager = get_session_manager()
@@ -209,7 +212,10 @@ async def start_session(request: SessionStartRequest):
         return SessionStartResponse(
             session_id=session.session_id,
             recipe_title=session.recipe.get("title", "Untitled Recipe"),
-            total_steps=session.total_steps
+            total_steps=session.total_steps,
+            current_step=session.current_step,
+            recipe=session.recipe,
+            step_data=session.current_step_data
         )
         
     except Exception as e:
