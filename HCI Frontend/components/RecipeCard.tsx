@@ -1,4 +1,4 @@
-import { Heart, Clock, ChefHat } from "lucide-react";
+import { Bookmark, Clock, ChefHat } from "lucide-react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -13,6 +13,8 @@ interface RecipeCardProps {
   difficulty: string;
   tags: string[];
   onClick: () => void;
+  isSaved?: boolean;
+  onToggleSave?: () => void;
 }
 
 export function RecipeCard({
@@ -23,12 +25,15 @@ export function RecipeCard({
   difficulty,
   tags,
   onClick,
+  isSaved = false,
+  onToggleSave,
 }: RecipeCardProps) {
-  const [isSaved, setIsSaved] = useState(false);
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
+    if (onToggleSave) {
+      onToggleSave();
+    }
   };
 
   return (
@@ -46,10 +51,9 @@ export function RecipeCard({
           onClick={handleSave}
           className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
         >
-          <Heart
-            className={`w-5 h-5 ${
-              isSaved ? "fill-rose-500 text-rose-500" : "text-gray-700"
-            }`}
+          <Bookmark
+            className={`w-5 h-5 ${isSaved ? "fill-orange-600 text-orange-600" : "text-gray-700"
+              }`}
           />
         </button>
       </div>

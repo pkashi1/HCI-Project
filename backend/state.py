@@ -162,9 +162,15 @@ class CookingSession:
 class SessionManager:
     """Manages cooking sessions with SQLite persistence."""
     
-    def __init__(self, db_path: str = "runtime/db.sqlite"):
+    def __init__(self, db_path: str = None):
         """Initialize session manager."""
         import os
+        
+        if db_path is None:
+            # Default to runtime/HCIDB.sqlite relative to this file
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(base_dir, "runtime", "HCIDB.sqlite")
+            
         # Create runtime directory if it doesn't exist
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):

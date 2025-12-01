@@ -13,6 +13,7 @@ export interface SavedRecipe {
 export interface Recipe {
   title: string;
   description?: string;
+  image?: string;
   ingredients: Record<string, string[]>;
   kitchen_tools_and_dishes: string[];
   steps: Array<{
@@ -22,6 +23,7 @@ export interface Recipe {
   }>;
   servings?: string;
   total_time?: string;
+  video_url?: string;
   [key: string]: any;
 }
 
@@ -34,6 +36,8 @@ export interface IngestResponse {
   title: string;
   transcript: string;
   snippet_count: number;
+  thumbnail?: string;
+  url?: string;
 }
 
 export interface ExtractRequest {
@@ -58,6 +62,7 @@ export interface SessionStartResponse {
 export interface SessionQueryRequest {
   session_id: string;
   query: string;
+  image?: string;
 }
 
 export interface SessionQueryResponse {

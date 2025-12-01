@@ -3,7 +3,8 @@ import { HomePage } from "./components/HomePage";
 import { RecipeDetail } from "./components/RecipeDetail";
 import { BottomNavigation } from "./components/BottomNavigation";
 import { Toaster } from "./components/ui/sonner";
-import { listRecipes } from "./src/services/api";
+import { listRecipes, saveRecipe } from "./src/services/api";
+import { toast } from "sonner";
 
 interface HomeRecipe {
   id: number;
@@ -13,6 +14,15 @@ interface HomeRecipe {
   time: string;
   difficulty: string;
   tags: string[];
+  video_url?: string;
+  ingredients?: Record<string, string[]>;
+  steps?: Array<{
+    step_number: number;
+    instruction: string;
+    estimated_time?: string;
+  }>;
+  kitchen_tools_and_dishes?: string[];
+  isSaved?: boolean;
 }
 
 interface Recipe {
@@ -32,6 +42,7 @@ interface Recipe {
   }>;
   servings?: string;
   total_time?: string;
+  video_url?: string;
   [key: string]: any;
 }
 
@@ -48,81 +59,39 @@ export default function App() {
     const fetchRecipes = async () => {
       try {
         const savedRecipes = await listRecipes();
-        
-        // Convert saved recipes to HomeRecipe format
-        const homeRecipes: HomeRecipe[] = savedRecipes.map(savedRecipe => ({
-          id: savedRecipe.id,
-          title: savedRecipe.title,
-          description: savedRecipe.description || "",
-          image: "https://images.unsplash.com/photo-1711539137930-3fa2ae6cec60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBwYXN0YSUyMGRpc2h8ZW58MXx8fHwxNzYyMDYzNDU5fDA&ixlib=rb-4.1.0&q=80&w=1080", // Default image
-          time: savedRecipe.recipe.total_time || "N/A",
-          difficulty: "Medium", // Default difficulty
-          tags: ["Saved Recipe"] // Default tags
-        }));
-        
+        let homeRecipes: HomeRecipe[] = [];
+
+        if (savedRecipes.length > 0) {
+          try {
+            // Convert saved recipes to HomeRecipe format
+            homeRecipes = savedRecipes.map(savedRecipe => ({
+              id: savedRecipe.id,
+              title: savedRecipe.title,
+              description: savedRecipe.description || "",
+              image: savedRecipe.recipe.image || "https://images.unsplash.com/photo-1711539137930-3fa2ae6cec60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBwYXN0YSUyMGRpc2h8ZW58MXx8fHwxNzYyMDYzNDU5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+              time: savedRecipe.recipe.total_time || "N/A",
+              difficulty: "Medium", // Default difficulty
+              tags: [], // Removed "Saved Recipe" tag
+              video_url: savedRecipe.recipe.video_url,
+              ingredients: savedRecipe.recipe.ingredients,
+              steps: savedRecipe.recipe.steps,
+              kitchen_tools_and_dishes: savedRecipe.recipe.kitchen_tools_and_dishes,
+              isSaved: true
+            }));
+          } catch (mapError) {
+            console.error("Error mapping recipes:", mapError);
+            toast.error("Error processing saved recipes");
+          }
+        }
+
         setRecipes(homeRecipes);
-        setFeaturedRecipes(homeRecipes.slice(0, 3)); // First 3 as featured
+        setFeaturedRecipes(homeRecipes.slice(0, 3));
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch recipes:", error);
-        // Fallback to hardcoded recipes if backend fails
-        /*
-        const fallbackRecipes: HomeRecipe[] = [
-          {
-            id: 1,
-            title: "Creamy Garlic Pasta",
-            description: "A quick and delicious weeknight dinner with rich flavors",
-            image:
-              "https://images.unsplash.com/photo-1711539137930-3fa2ae6cec60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBwYXN0YSUyMGRpc2h8ZW58MXx8fHwxNzYyMDYzNDU5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-            time: "25 min",
-            difficulty: "Easy",
-            tags: ["Vegetarian", "Italian", "Quick"],
-          },
-          {
-            id: 2,
-            title: "Fresh Garden Salad Bowl",
-            description: "Crisp vegetables with a tangy vinaigrette dressing",
-            image:
-              "https://images.unsplash.com/photo-1620019989479-d52fcedd99fe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmVzaCUyMHNhbGFkJTIwYm93bHxlbnwxfHx8fDE3NjIwNjM4NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-            time: "15 min",
-            difficulty: "Easy",
-            tags: ["Healthy", "Vegan", "Gluten-Free"],
-          },
-          {
-            id: 3,
-            title: "Herb Grilled Chicken",
-            description: "Juicy chicken breast marinated in aromatic herbs",
-            image:
-              "https://images.unsplash.com/photo-1682423187670-4817da9a1b23?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncmlsbGVkJTIwY2hpY2tlbiUyMG1lYWx8ZW58MXx8fHwxNzYyMDg5MDY3fDA&ixlib=rb-4.1.0&q=80&w=1080",
-            time: "35 min",
-            difficulty: "Medium",
-            tags: ["High-Protein", "Paleo", "Gluten-Free"],
-          },
-          {
-            id: 4,
-            title: "Decadent Chocolate Cake",
-            description: "Rich, moist chocolate cake with ganache frosting",
-            image:
-              "https://images.unsplash.com/photo-1736840334919-aac2d5af73e4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaG9jb2xhdGUlMjBkZXNzZXJ0JTIwY2FrZXxlbnwxfHx8fDE3NjIxMjg3NDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-            time: "60 min",
-            difficulty: "Hard",
-            tags: ["Dessert", "Vegetarian", "Special"],
-          },
-          {
-            id: 5,
-            title: "Fluffy Blueberry Pancakes",
-            description: "Perfect breakfast stack with fresh berries",
-            image:
-              "https://images.unsplash.com/photo-1636743713732-125909a35dcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxicmVha2Zhc3QlMjBwYW5jYWtlc3xlbnwxfHx8fDE3NjIxMDMxMzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
-            time: "20 min",
-            difficulty: "Easy",
-            tags: ["Breakfast", "Vegetarian", "Kid-Friendly"],
-          },
-        ];
-        */
-        
-        // setRecipes(fallbackRecipes);
-        // setFeaturedRecipes(fallbackRecipes.slice(0, 3));
+        toast.error("Failed to load recipes: " + (error.message || "Unknown error"));
+        setRecipes([]);
+        setFeaturedRecipes([]);
         setLoading(false);
       }
     };
@@ -159,9 +128,39 @@ export default function App() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    if (tab === "home") {
+    if (tab === "home" || tab === "search" || tab === "saved") {
       setCurrentScreen("home");
       setSelectedRecipe(null);
+    }
+  };
+
+  const handleToggleSave = async (recipe: any) => {
+    if (recipe.isSaved) {
+      // Unsave: Just update local state to isSaved: false
+      // Note: This doesn't delete from DB, so it will reappear on reload.
+      // To properly delete, we'd need a delete endpoint.
+      setRecipes(prev => prev.map(r =>
+        r.id === recipe.id ? { ...r, isSaved: false } : r
+      ));
+      toast.success("Recipe removed from saved");
+    } else {
+      // Save: Call API and update list
+      try {
+        await saveRecipe(recipe.title, recipe.description || "", {
+          ...recipe,
+          ingredients: recipe.ingredients || {},
+          steps: recipe.steps || [],
+          kitchen_tools_and_dishes: recipe.kitchen_tools_and_dishes || []
+        });
+
+        setRecipes(prev => prev.map(r =>
+          r.id === recipe.id ? { ...r, isSaved: true } : r
+        ));
+        toast.success("Recipe saved!");
+      } catch (error) {
+        toast.error("Failed to save recipe");
+        console.error(error);
+      }
     }
   };
 
@@ -180,6 +179,8 @@ export default function App() {
           recipes={recipes}
           featuredRecipes={featuredRecipes}
           onRecipeClick={handleRecipeClick}
+          activeTab={activeTab}
+          onToggleSave={handleToggleSave}
         />
       ) : (
         selectedRecipe && (

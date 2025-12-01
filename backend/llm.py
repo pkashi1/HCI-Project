@@ -54,7 +54,7 @@ class OllamaClient:
     
     def chat(
         self, 
-        messages: List[Dict[str, str]], 
+        messages: List[Dict[str, any]], 
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 4000,
@@ -64,7 +64,7 @@ class OllamaClient:
         Send chat completion request to Ollama.
         
         Args:
-            messages: List of message dicts with 'role' and 'content'
+            messages: List of message dicts with 'role', 'content', and optional 'images'
             model: Model name (uses default if None)
             temperature: Sampling temperature (0.0-1.0)
             max_tokens: Maximum tokens to generate
@@ -183,7 +183,7 @@ def get_client(model: str = "gemma3:1b") -> OllamaClient:
     return _client
 
 
-def chat(messages: List[Dict[str, str]], model: str = "gemma3:1b", temperature: float = 0.7) -> str:
+def chat(messages: List[Dict[str, any]], model: str = "gemma3:1b", temperature: float = 0.7) -> str:
     """
     Convenience function for chat completion with automatic fallback.
     

@@ -1,4 +1,4 @@
-import { ArrowLeft, Bookmark, Link as LinkIcon, Play, Pause, RotateCcw, Timer, ChefHat, Clock } from "lucide-react";
+import { ArrowLeft, Bookmark, Link as LinkIcon, Play, Pause, RotateCcw, Timer, ChefHat, Clock, Camera, X } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Checkbox } from "./ui/checkbox";
@@ -6,16 +6,17 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { VoiceCommandButton } from "./VoiceCommandButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { 
-  Recipe, 
-  ingestVideo, 
-  extractRecipe, 
-  startSession, 
-  querySession, 
-  navigateStep, 
+import {
+  Recipe,
+  ingestVideo,
+  extractRecipe,
+  startSession,
+  querySession,
+  navigateStep,
   addTimer,
   getSessionState
 } from "../src/services/api";
@@ -27,11 +28,11 @@ interface RecipeDetailProps {
 
 export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   const [isSaved, setIsSaved] = useState(false);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState(recipe.video_url || "");
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(
     new Set()
   );
-  
+
   // Session state
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -46,11 +47,17 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
     status: string;
     started_at: number;
   }>>([]);
-  
+
   // Timer state
   const [timerLabel, setTimerLabel] = useState("");
   const [timerDuration, setTimerDuration] = useState("");
-  
+
+  // Camera state
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const handleSave = () => {
     setIsSaved(!isSaved);
     if (!isSaved) {
@@ -80,17 +87,7 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
     setCheckedIngredients(newChecked);
   };
 
-  const ingredients = recipe.ingredients || {
-    "main_ingredients": [
-      "2 cups pasta",
-      "3 tablespoons olive oil",
-      "4 cloves garlic, minced",
-      "1 cup cherry tomatoes",
-      "1/2 cup fresh basil",
-      "1/4 cup parmesan cheese",
-      "Salt and pepper to taste",
-    ]
-  };
+  const ingredients = recipe.ingredients || {};
 
   const getYoutubeEmbedUrl = (url: string) => {
     const videoIdMatch = url.match(
@@ -98,7 +95,7 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
     );
     return videoIdMatch
       ? `https://www.youtube.com/embed/${videoIdMatch[1]}`
-      : null;
+      : undefined;
   };
 
   const embedUrl = youtubeUrl ? getYoutubeEmbedUrl(youtubeUrl) : null;
@@ -121,19 +118,19 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   // Handle voice command
   const handleVoiceCommand = async (command: string) => {
     if (!sessionId) return;
-    
+
     try {
       const response = await querySession({
         session_id: sessionId,
         query: command
       });
-      
+
       // Update state based on response
       setCurrentStep(response.current_step);
       setTotalSteps(response.total_steps);
       setIsPaused(response.is_paused);
       setActiveTimers(response.active_timers);
-      
+
       // Show assistant response
       toast.info(response.response);
     } catch (error) {
@@ -145,17 +142,17 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   // Navigate steps
   const navigateToStep = async (action: string) => {
     if (!sessionId) return;
-    
+
     try {
       const response = await navigateStep({
         session_id: sessionId,
         action
       });
-      
+
       // Update state
       setCurrentStep(response.current_step);
       setTotalSteps(response.total_steps);
-      
+
       // Show step instruction
       if (response.step_data?.instruction) {
         toast.info(response.step_data.instruction);
@@ -170,20 +167,20 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   const handleAddTimer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionId || !timerLabel || !timerDuration) return;
-    
+
     try {
       const response = await addTimer({
         session_id: sessionId,
         label: timerLabel,
         duration: timerDuration
       });
-      
+
       // Reset form
       setTimerLabel("");
       setTimerDuration("");
-      
+
       toast.success(`Timer set for ${timerLabel}`);
-      
+
       // Refresh active timers
       if (sessionId) {
         const state = await getSessionState(sessionId);
@@ -198,19 +195,107 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   // Toggle pause
   const togglePause = async () => {
     if (!sessionId) return;
-    
+
     try {
       const command = isPaused ? "resume" : "pause";
       const response = await querySession({
         session_id: sessionId,
         query: command
       });
-      
+
       setIsPaused(response.is_paused);
       toast.info(response.is_paused ? "Session paused" : "Session resumed");
     } catch (error) {
       toast.error("Failed to toggle pause");
       console.error("Pause error:", error);
+    }
+  };
+
+  // Analyze image content
+  const analyzeImage = async (base64Content: string) => {
+    if (!sessionId) return;
+
+    try {
+      toast.info("Analyzing image...");
+      const response = await querySession({
+        session_id: sessionId,
+        query: "Does this look correct?",
+        image: base64Content
+      });
+
+      // Update state
+      setCurrentStep(response.current_step);
+      setTotalSteps(response.total_steps);
+      setIsPaused(response.is_paused);
+      setActiveTimers(response.active_timers);
+
+      // Show assistant response
+      toast.info(response.response, {
+        duration: 5000, // Show for longer
+      });
+    } catch (error) {
+      toast.error("Failed to analyze image");
+      console.error("Image analysis error:", error);
+    }
+  };
+
+  // Handle file upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value to allow selecting same file again
+    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      const base64Content = base64String.split(',')[1];
+      await analyzeImage(base64Content);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Camera handling
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCameraOpen(true);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      toast.error("Could not access camera. Please check permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        const base64Content = dataUrl.split(',')[1];
+
+        stopCamera();
+        analyzeImage(base64Content);
+      }
     }
   };
 
@@ -224,7 +309,7 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
   // Effect to periodically update timers
   useEffect(() => {
     if (!sessionId || activeTimers.length === 0) return;
-    
+
     const interval = setInterval(async () => {
       try {
         const state = await getSessionState(sessionId);
@@ -233,7 +318,7 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
         console.error("Failed to update timers:", error);
       }
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, [sessionId, activeTimers.length]);
 
@@ -261,9 +346,8 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
             className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors"
           >
             <Bookmark
-              className={`w-5 h-5 ${
-                isSaved ? "fill-orange-600 text-orange-600" : "text-gray-700"
-              }`}
+              className={`w-5 h-5 ${isSaved ? "fill-orange-600 text-orange-600" : "text-gray-700"
+                }`}
             />
           </button>
         </div>
@@ -328,6 +412,26 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
                     {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                     {isPaused ? "Resume" : "Pause"}
                   </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={startCamera}
+                    className="flex items-center gap-1"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Verify
+                  </Button>
+
+                  {/* Hidden file input for fallback/gallery upload */}
+                  <input
+                    type="file"
+                    id="image-upload"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+
                   <Button
                     size="sm"
                     variant="outline"
@@ -364,6 +468,33 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
               </div>
             </div>
 
+            {/* Camera Dialog */}
+            <Dialog open={isCameraOpen} onOpenChange={(open) => !open && stopCamera()}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Verify Step</DialogTitle>
+                </DialogHeader>
+                <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
+                </div>
+                <div className="flex justify-center gap-4 py-4">
+                  <Button variant="outline" onClick={() => document.getElementById('image-upload')?.click()}>
+                    Upload from Gallery
+                  </Button>
+                  <Button onClick={capturePhoto}>
+                    <Camera className="w-4 h-4 mr-2" />
+                    Capture
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* Active Timers */}
             {activeTimers.length > 0 && (
               <div className="bg-white px-6 py-4 border-b border-gray-200">
@@ -380,15 +511,15 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
                       </div>
                       <div className="flex gap-1">
                         {/* Pause/Resume Button */}
-                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement pause/resume timer */}} title={timer.status === 'paused' ? 'Resume' : 'Pause'}>
+                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement pause/resume timer */ }} title={timer.status === 'paused' ? 'Resume' : 'Pause'}>
                           {timer.status === 'paused' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                         </Button>
                         {/* Edit Button */}
-                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement edit timer */}} title="Edit">
+                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement edit timer */ }} title="Edit">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z" /></svg>
                         </Button>
                         {/* Delete Button */}
-                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement delete timer */}} title="Delete">
+                        <Button size="icon" variant="ghost" onClick={() => {/* TODO: Implement delete timer */ }} title="Delete">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         </Button>
                       </div>
@@ -457,11 +588,10 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
                       />
                       <label
                         htmlFor={`ingredient-${categoryIndex}-${index}`}
-                        className={`flex-1 cursor-pointer ${
-                          checkedIngredients.has(categoryIndex * 100 + index)
-                            ? "line-through text-gray-400"
-                            : "text-gray-700"
-                        }`}
+                        className={`flex-1 cursor-pointer ${checkedIngredients.has(categoryIndex * 100 + index)
+                          ? "line-through text-gray-400"
+                          : "text-gray-700"
+                          }`}
                       >
                         {ingredient}
                       </label>
@@ -475,11 +605,10 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
           <TabsContent value="instructions" className="px-6 py-5">
             <div className="space-y-6">
               {recipe.steps?.map((step, index) => (
-                <div 
-                  key={index} 
-                  className={`flex gap-4 p-3 rounded-lg ${
-                    currentStep === step.step_number ? "bg-orange-50 border border-orange-200" : ""
-                  }`}
+                <div
+                  key={index}
+                  className={`flex gap-4 p-3 rounded-lg ${currentStep === step.step_number ? "bg-orange-50 border border-orange-200" : ""
+                    }`}
                 >
                   <div className="shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center">
                     {step.step_number}
@@ -487,18 +616,18 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
                   <p className="flex-1 text-gray-700 pt-1">{step.instruction}</p>
                 </div>
               )) || (
-                <p>No instructions available</p>
-              )}
+                  <p>No instructions available</p>
+                )}
             </div>
           </TabsContent>
 
           <TabsContent value="video" className="px-6 py-5">
             {/* Show YouTube video if URL is available in recipe */}
-            {recipe.youtubeUrl || youtubeUrl ? (
+            {recipe.video_url || youtubeUrl ? (
               <>
                 <div className="aspect-video w-full rounded-lg overflow-hidden mb-2">
                   <iframe
-                    src={getYoutubeEmbedUrl(recipe.youtubeUrl || youtubeUrl)}
+                    src={getYoutubeEmbedUrl(recipe.video_url || youtubeUrl || "")}
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
@@ -507,8 +636,8 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
                 </div>
                 <div className="text-xs text-gray-500 break-all">
                   <span className="font-medium">YouTube URL: </span>
-                  <a href={recipe.youtubeUrl || youtubeUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">
-                    {recipe.youtubeUrl || youtubeUrl}
+                  <a href={recipe.video_url || youtubeUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">
+                    {recipe.video_url || youtubeUrl}
                   </a>
                 </div>
               </>
@@ -528,7 +657,7 @@ export function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
       </div>
 
       {/* Voice Command Button */}
-      <VoiceCommandButton 
+      <VoiceCommandButton
         sessionId={sessionId}
         onCommand={handleVoiceCommand}
       />

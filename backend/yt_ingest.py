@@ -21,18 +21,26 @@ def extract_video_id(url_or_id: str) -> str:
     return match.group(1) if match else url_or_id
 
 
-def get_video_title(video_id: str) -> str:
-    """Fetch video title using yt-dlp."""
+def get_video_metadata(video_id: str) -> Dict[str, str]:
+    """Fetch video title and thumbnail using yt-dlp."""
     try:
         ydl_opts = {'quiet': True, 'no_warnings': True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
             # Sanitize title for filenames
             title = re.sub(r'[<>:"/\\|?*]', '_', info['title'])
-            return title
+            return {
+                'title': title,
+                'thumbnail': info.get('thumbnail', ''),
+                'url': info.get('webpage_url', f"https://www.youtube.com/watch?v={video_id}")
+            }
     except Exception as e:
-        print(f"Could not fetch title: {e}")
-        return video_id
+        print(f"Could not fetch metadata: {e}")
+        return {
+            'title': video_id,
+            'thumbnail': '',
+            'url': f"https://www.youtube.com/watch?v={video_id}"
+        }
 
 
 def get_transcript_from_api(video_id: str, languages: List[str] = None) -> Optional[Dict]:
@@ -40,7 +48,7 @@ def get_transcript_from_api(video_id: str, languages: List[str] = None) -> Optio
     Try to get transcript using youtube-transcript-api.
     
     Returns:
-        Dict with 'text' (full transcript), 'snippets' (list of timed segments), and 'title'
+        Dict with 'text', 'snippets', 'title', 'thumbnail', 'url'
         None if transcript unavailable
     """
     if languages is None:
@@ -50,8 +58,8 @@ def get_transcript_from_api(video_id: str, languages: List[str] = None) -> Optio
         api = YouTubeTranscriptApi()
         transcript_data = api.fetch(video_id, languages=languages)
         
-        # Get title
-        title = get_video_title(video_id)
+        # Get metadata
+        metadata = get_video_metadata(video_id)
         
         # Extract snippets with timestamps
         snippets = [{
@@ -65,7 +73,9 @@ def get_transcript_from_api(video_id: str, languages: List[str] = None) -> Optio
         
         return {
             'video_id': video_id,
-            'title': title,
+            'title': metadata['title'],
+            'thumbnail': metadata['thumbnail'],
+            'url': metadata['url'],
             'text': full_text,
             'snippets': snippets,
             'source': 'api'

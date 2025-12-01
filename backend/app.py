@@ -55,6 +55,8 @@ class IngestResponse(BaseModel):
     title: str
     transcript: str
     snippet_count: int
+    thumbnail: Optional[str] = None
+    url: Optional[str] = None
 
 
 class ExtractRequest(BaseModel):
@@ -79,6 +81,7 @@ class SessionStartResponse(BaseModel):
 class SessionQueryRequest(BaseModel):
     session_id: str
     query: str
+    image: Optional[str] = None
 
 
 class SessionQueryResponse(BaseModel):
@@ -158,7 +161,9 @@ async def ingest_video(request: IngestRequest):
             video_id=result["video_id"],
             title=result["title"],
             transcript=result["text"],
-            snippet_count=len(result["snippets"])
+            snippet_count=len(result["snippets"]),
+            thumbnail=result.get("thumbnail"),
+            url=result.get("url")
         )
         
     except HTTPException:
@@ -338,6 +343,16 @@ async def query_session(request: SessionQueryRequest):
             timers=timers_list,
             user_query=request.query
         )
+        
+        # Add image if provided
+        if request.image:
+            # Add image to the last user message
+            if messages and messages[-1]["role"] == "user":
+                messages[-1]["images"] = [request.image]
+                
+                # If query is empty or generic, add context
+                if not request.query or len(request.query) < 5:
+                    messages[-1]["content"] += "\n\n[User provided an image of the cooking state. Please verify if it matches the current step instructions.]"
         
         # Get response from LLM
         response = chat(messages, temperature=0.7)
