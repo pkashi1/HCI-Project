@@ -55,8 +55,6 @@ class IngestResponse(BaseModel):
     title: str
     transcript: str
     snippet_count: int
-    thumbnail: Optional[str] = None
-    url: Optional[str] = None
 
 
 class ExtractRequest(BaseModel):
@@ -161,9 +159,7 @@ async def ingest_video(request: IngestRequest):
             video_id=result["video_id"],
             title=result["title"],
             transcript=result["text"],
-            snippet_count=len(result["snippets"]),
-            thumbnail=result.get("thumbnail"),
-            url=result.get("url")
+            snippet_count=len(result["snippets"])
         )
         
     except HTTPException:
